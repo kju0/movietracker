@@ -1,29 +1,19 @@
-import requests
-from bs4 import BeautifulSoup
+from flask import Flask, render_template, jsonify, request
+app = Flask(__name__)
 
 
-headers = {'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.86 Safari/537.36'}
-#cgv 영화 가져오기
-url = 'http://www.cgv.co.kr/movies/?lt=1&ft=0'
-data = requests.get(url,headers=headers)
+from pymongo import MongoClient
+client = MongoClient('mongodb')
+db = client.MovieTracker
 
-# HTML을 BeautifulSoup이라는 라이브러리를 활용해 검색하기 용이한 데이터로 파싱
-soup = BeautifulSoup(data.text, 'html.parser')
-#print(soup)
+@app.route('/')
+def home():
+   return render_template('index.html')
 
-results = soup.select('div.sect-movie-chart > ol > li')
+@app.route('/list', methods=['GET'])
+def movie_list():
+   result = list(db.movieList.find({}, {'_id':0}))
+   return jsonify({'result':'success', 'msg':'GET 연결 완료!', 'movie_list':result})
 
-for re in results:
-    img = re.select_one('div.box-image > a > span.thumb-image > img')
-    title = re.select_one('div.box-contents > a > strong.title')
-    detail = re.select_one('div.box-contents > a')
-
-    #nonetype 예외처리
-    if img is not None and title is not None and detail is not None:
-        img_url = img['src']
-        movie_title = title.text
-        detail_url = detail['href']
-
-        print("title:", movie_title)
-        print("img url:", img_url)
-        print("detail url:", detail_url)
+if __name__ == '__main__':  
+   app.run('0.0.0.0',port=5001,debug=True)
